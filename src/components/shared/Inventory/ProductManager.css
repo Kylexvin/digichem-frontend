@@ -1,0 +1,121 @@
+/* src/components/shared/Inventory/ProductManager.css */
+.product-manager {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.product-manager-header {
+  margin-bottom: 24px;
+}
+
+.product-manager-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 8px 0;
+}
+
+.product-manager-header p {
+  color: #718096;
+  margin: 0;
+  font-size: 16px;
+}
+
+.product-manager-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.controls-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.filter-checkbox input {
+  margin: 0;
+}
+
+.controls-right {
+  display: flex;
+  gap: 12px;
+}
+
+.product-summary-card {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 24px;
+  padding: 20px;
+}
+
+.summary-item {
+  text-align: center;
+  padding: 0 20px;
+}
+
+.summary-label {
+  display: block;
+  font-size: 14px;
+  color: #718096;
+  margin-bottom: 8px;
+}
+
+.summary-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #4299e1;
+}
+
+.summary-value.warning {
+  color: #ed8936;
+}
+
+.summary-value.danger {
+  color: #f56565;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .product-manager-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .controls-left {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .product-summary-card {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .summary-item {
+    padding: 10px 0;
+  }
+}

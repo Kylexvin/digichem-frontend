@@ -1,0 +1,81 @@
+.low-stock-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e1e5e9;
+}
+
+.alert-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.alert-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-left: 4px solid #dc3545;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  color: #dc3545;
+}
+
+.alert-header h3 {
+  margin: 0;
+}
+
+.alert-details {
+  margin-bottom: 15px;
+}
+
+.stock-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.stock-info span {
+  font-size: 14px;
+  padding: 5px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.urgency-badge {
+  background: #dc3545;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.alert-actions {
+  display: flex;
+  gap: 10px;
+}
