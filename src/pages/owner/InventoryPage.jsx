@@ -14,7 +14,7 @@ import {
   
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { apiClient } from '../../services/utils/apiClient';
+import  apiClient  from '../../services/utils/apiClient';
 import './InventoryPage.css';
 
 const InventoryPage = () => {

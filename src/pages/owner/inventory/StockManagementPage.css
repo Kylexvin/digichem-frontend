@@ -54,6 +54,17 @@
   border-radius: 4px;
   overflow: hidden;
 }
+.stock-item {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.stock-zero {
+  color: red;
+  font-weight: bold;
+}
 
 .stock-progress {
   height: 100%;

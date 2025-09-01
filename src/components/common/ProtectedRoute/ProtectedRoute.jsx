@@ -1,47 +1,26 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+// src/components/common/ProtectedRoute/ProtectedRoute.jsx
 import { useAuth } from '../../../context/AuthContext';
-import Loading from '../UI/Loading';
-import './ProtectedRoute.css';
+import { Navigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ children, requiredRoles = [] }) => {
-  const { isAuthenticated, user, loading, initialized } = useAuth();
-  const location = useLocation();
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const { user, isLoading } = useAuth();
 
-  console.log('ProtectedRoute - auth state:', {
-    isAuthenticated,
-    loading,
-    initialized,
-    user: user?.email,
-    path: location.pathname
-  });
-
-  // Show loading only while auth is initializing
-  if (loading || !initialized) {
-    console.log('ProtectedRoute - showing loading (auth initializing)');
-    return (
-      <div className="protected-route-loading">
-        <Loading text="Checking authentication..." />
-      </div>
-    );
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    console.log('ProtectedRoute - not authenticated, redirecting to login');
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
-  // Check if user has required role
-  if (requiredRoles.length > 0 && user && !requiredRoles.includes(user.role)) {
-    console.log('ProtectedRoute - role not allowed:', {
-      userRole: user.role,
-      requiredRoles
-    });
-    return <Navigate to="/unauthorized" replace />;
+  // Support multiple roles
+  if (requiredRole) {
+    const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!allowedRoles.includes(user.role)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
-  console.log('ProtectedRoute - access granted');
   return children;
 };
 

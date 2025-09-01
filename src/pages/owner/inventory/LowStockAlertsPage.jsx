@@ -1,56 +1,70 @@
-import React from 'react';
-import { AlertTriangle, Package, Plus } from 'lucide-react';
-import './LowStockAlertsPage.css';
+// src/pages/owner/inventory/LowStockAlertsPage.jsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/utils/apiClient';
 
 const LowStockAlertsPage = () => {
-  const lowStockItems = [
-    { id: 1, name: 'Ibuprofen 400mg', current: 5, min: 10, needed: 45 },
-    { id: 2, name: 'Amoxicillin 250mg', current: 12, min: 15, needed: 38 },
-    { id: 3, name: 'Aspirin 75mg', current: 8, min: 12, needed: 42 }
-  ];
+  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchLowStockProducts = async () => {
+      try {
+        const response = await apiClient.get('/products');
+        const products = response.data || [];
+
+        // filter products below minStockLevel
+        const lowStock = products.filter(
+          (p) =>
+            p.stock &&
+            (p.stock.fullPacks || 0) < (p.stock.minStockLevel || 0)
+        );
+
+        setLowStockProducts(lowStock);
+      } catch (error) {
+        console.error('Error fetching low stock products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLowStockProducts();
+  }, []);
 
   return (
-    <div className="low-stock-page">
-      <div className="page-header">
-        <h1>Low Stock Alerts</h1>
-        <div className="alert-count">
-          <AlertTriangle size={20} />
-          <span>{lowStockItems.length} items need restocking</span>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Low Stock Alerts</h2>
+        <button
+          onClick={() => navigate('/owner/inventory/stock-management')}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700"
+        >
+          Go to Stock Management
+        </button>
+      </div>
+
+      {loading ? (
+        <p>Loading...</p>
+      ) : lowStockProducts.length === 0 ? (
+        <p className="text-green-600">All products are above minimum stock levels.</p>
+      ) : (
+        <div className="grid gap-4">
+          {lowStockProducts.map((product) => (
+            <div
+              key={product._id}
+              className="p-4 border rounded-lg bg-red-50 border-red-300"
+            >
+              <h3 className="text-lg font-semibold text-red-700">{product.name}</h3>
+              <p>
+                Current: <span className="font-bold text-red-600">{product.stock?.fullPacks || 0}</span>
+              </p>
+              <p>Minimum Required: {product.stock?.minStockLevel || 0}</p>
+              <p>Maximum: {product.stock?.maxStockLevel || '-'}</p>
+            </div>
+          ))}
         </div>
-      </div>
-
-      <div className="alerts-grid">
-        {lowStockItems.map(item => (
-          <div key={item.id} className="alert-card critical">
-            <div className="alert-header">
-              <AlertTriangle size={24} />
-              <h3>{item.name}</h3>
-            </div>
-            
-            <div className="alert-details">
-              <div className="stock-info">
-                <span>Current: {item.current}</span>
-                <span>Minimum: {item.min}</span>
-                <span>Needed: {item.needed}</span>
-              </div>
-              
-              <div className="urgency-badge">
-                {item.current === 0 ? 'OUT OF STOCK' : 'LOW STOCK'}
-              </div>
-            </div>
-
-            <div className="alert-actions">
-              <button className="btn btn-primary">
-                <Plus size={16} />
-                Restock Now
-              </button>
-              <button className="btn btn-secondary">
-                View Details
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   );
 };

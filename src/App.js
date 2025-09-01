@@ -1,10 +1,9 @@
-// src/App.js
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/common/ProtectedRoute/ProtectedRoute';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/shared/LoginPage';
 import OwnerDashboardPage from './pages/owner/OwnerDashboardPage';
+import StaffManagementPage from './pages/owner/StaffManagementPage';
 import InventoryPage from './pages/owner/InventoryPage';
 import ProductsPage from './pages/owner/inventory/ProductsPage';
 import AddProductPage from './pages/owner/inventory/AddProductPage';
@@ -12,40 +11,22 @@ import StockManagementPage from './pages/owner/inventory/StockManagementPage';
 import LowStockAlertsPage from './pages/owner/inventory/LowStockAlertsPage';
 import StockReconciliationPage from './pages/owner/inventory/StockReconciliationPage';
 import InventoryReportsPage from './pages/owner/inventory/InventoryReportsPage';
-import NotFoundPage from './pages/shared/NotFoundPage';
+import ReportsPage from './pages/owner/ReportsPage';
+import SettingsPage from './pages/owner/SettingsPage';
+import WebsitePage from './pages/owner/WebsitePage';
+import POSPage from './pages/attendant/POSPage';
+import ProtectedRoute from './components/common/ProtectedRoute/ProtectedRoute';
 import './App.css';
 
-function App() {
-  const [loading, setLoading] = useState(true);
-  const [brandingData, setBrandingData] = useState(null);
+const AppRoutes = () => {
+  const { isLoading, brandingData } = useAuth();
 
-  useEffect(() => {
-    const fetchBranding = async () => {
-      try {
-        const res = await fetch('http://localhost:5000/api/pharmacy/branding');
-        const data = await res.json();
-        if (data.success && data.data?.branding) {
-          setBrandingData(data.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch branding, using default', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBranding();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div
-        className="owner-dashboard"
-        style={{
-          '--primary-color': brandingData?.branding?.primaryColor || '#ffa600ff',
-          '--secondary-color': brandingData?.branding?.secondaryColor || '#ec0606ff'
-        }}
-      >
+      <div className="owner-dashboard" style={{
+        '--primary-color': brandingData?.branding?.primaryColor || '#ffa600ff',
+        '--secondary-color': brandingData?.branding?.secondaryColor || '#ec0606ff'
+      }}>
         <div className="loading-container">
           <div className="pharmacy-loading">
             <div className="loading-pills">
@@ -53,7 +34,7 @@ function App() {
               <div className="pill pill-2"></div>
               <div className="pill pill-3"></div>
             </div>
-            <p>Loading your pharmacy dashboard...</p>
+            <p>Loading ...</p>
           </div>
         </div>
       </div>
@@ -61,62 +42,43 @@ function App() {
   }
 
   return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Owner Routes */}
+      <Route path="/owner/dashboard" element={<ProtectedRoute requiredRole="pharmacy_owner"><OwnerDashboardPage /></ProtectedRoute>} />
+      <Route path="/owner/staff" element={<ProtectedRoute requiredRole="pharmacy_owner"><StaffManagementPage /></ProtectedRoute>} />
+
+      {/* Inventory routes */}
+      <Route path="/owner/inventory" element={<ProtectedRoute requiredRole="pharmacy_owner"><InventoryPage /></ProtectedRoute>} />
+      <Route path="/owner/inventory/products" element={<ProtectedRoute requiredRole="pharmacy_owner"><ProductsPage /></ProtectedRoute>} />
+      <Route path="/owner/inventory/add-product" element={<ProtectedRoute requiredRole="pharmacy_owner"><AddProductPage /></ProtectedRoute>} />
+      <Route path="/owner/inventory/stock-management" element={<ProtectedRoute requiredRole="pharmacy_owner"><StockManagementPage /></ProtectedRoute>} />
+      <Route path="/owner/inventory/low-stock-alerts" element={<ProtectedRoute requiredRole="pharmacy_owner"><LowStockAlertsPage /></ProtectedRoute>} />
+      <Route path="/owner/inventory/stock-reconciliation" element={<ProtectedRoute requiredRole="pharmacy_owner"><StockReconciliationPage /></ProtectedRoute>} />
+      <Route path="/owner/inventory/reports" element={<ProtectedRoute requiredRole="pharmacy_owner"><InventoryReportsPage /></ProtectedRoute>} />
+
+      <Route path="/owner/reports" element={<ProtectedRoute requiredRole="pharmacy_owner"><ReportsPage /></ProtectedRoute>} />
+      <Route path="/owner/settings" element={<ProtectedRoute requiredRole="pharmacy_owner"><SettingsPage /></ProtectedRoute>} />
+      <Route path="/owner/website" element={<ProtectedRoute requiredRole="pharmacy_owner"><WebsitePage /></ProtectedRoute>} />
+      <Route path="/owner/pos" element={<ProtectedRoute requiredRole="pharmacy_owner"><POSPage /></ProtectedRoute>} />
+      <Route path="/owner/subscriptions" element={<ProtectedRoute requiredRole="pharmacy_owner"><div>Subscriptions Page (to be implemented)</div></ProtectedRoute>} />
+      <Route path="/owner/support" element={<ProtectedRoute requiredRole="pharmacy_owner"><div>Support Page (to be implemented)</div></ProtectedRoute>} />
+
+      {/* Attendant route */}
+      <Route path="/attendant/pos" element={<ProtectedRoute requiredRole="attendant"><POSPage /></ProtectedRoute>} />
+
+      <Route path="/unauthorized" element={<div>Access Denied</div>} />
+      <Route path="*" element={<LoginPage />} />
+    </Routes>
+  );
+};
+
+function App() {
+  return (
     <AuthProvider>
       <Router>
-        <div className="App">
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/404" element={<NotFoundPage />} />
-            <Route
-              path="/unauthorized"
-              element={
-                <div className="unauthorized-page">
-                  <h1>Unauthorized</h1>
-                  <p>You don't have permission to access this resource.</p>
-                  <Navigate to="/login" replace />
-                </div>
-              }
-            />
-            <Route
-              path="/owner/*"
-              element={
-                <ProtectedRoute requiredRoles={['pharmacy_owner']}>
-                  <Routes>
-                    <Route path="dashboard" element={<OwnerDashboardPage />} />
-
-                    {/* Inventory nested routes */}
-                    <Route path="inventory" element={<InventoryPage />} />
-                    <Route path="inventory/products" element={<ProductsPage />} />
-                    <Route path="inventory/add-product" element={<AddProductPage />} />
-                    <Route path="inventory/stock-management" element={<StockManagementPage />} />
-                    <Route path="inventory/low-stock-alerts" element={<LowStockAlertsPage />} />
-                    <Route path="inventory/stock-reconciliation" element={<StockReconciliationPage />} />
-                    <Route path="inventory/reports" element={<InventoryReportsPage />} />
-
-                    <Route path="*" element={<Navigate to="/owner/dashboard" replace />} />
-                  </Routes>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/attendant/*"
-              element={
-                <ProtectedRoute requiredRoles={['pharmacy_attendant']}>
-                  <div>Attendant Dashboard - To be implemented</div>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Navigate to="/owner/dashboard" replace />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/404" replace />} />
-          </Routes>
-        </div>
+        <AppRoutes />
       </Router>
     </AuthProvider>
   );

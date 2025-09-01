@@ -1,69 +1,39 @@
-// src/api/authApi.js (Updated)
-import axios from 'axios';
-import { apiClient } from '../utils/apiClient';
+import apiClient from '../utils/apiClient';
 
 export const authApi = {
   login: async (credentials) => {
     try {
       const response = await apiClient.post('/auth/login', credentials);
-      return response;
+      return response.data;
     } catch (error) {
-      console.error('Login API error:', error);
-
-      if (error.response?.data) {
-        const errData = error.response.data;
-        error.message = errData.message || errData.error || error.message;
-      }
-
-      throw error;
+      throw new Error(error.response?.data?.message || 'Login failed');
     }
   },
 
   logout: async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const response = await apiClient.post('/auth/logout', { refreshToken });
-      return response;
-    } catch (error) {
-      console.error('Logout API error:', error.response?.data);
-      throw error;
-    }
-  },
-
-  refreshToken: async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'}/auth/refresh`,
-        { refreshToken },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      const response = await apiClient.post('/auth/logout');
       return response.data;
     } catch (error) {
-      console.error('Refresh token API error:', error.response?.data);
-      throw error;
+      throw new Error(error.response?.data?.message || 'Logout failed');
     }
   },
 
-  resetPassword: async (email) => {
+  refreshToken: async (refreshToken) => {
     try {
-      return await apiClient.post('/auth/reset-password', { email });
+      const response = await apiClient.post('/auth/refresh', { refreshToken });
+      return response.data;
     } catch (error) {
-      console.error('Reset password API error:', error.response?.data);
-      throw error;
+      throw new Error(error.response?.data?.message || 'Token refresh failed');
     }
   },
 
-  changePassword: async (data) => {
+  verifyToken: async () => {
     try {
-      return await apiClient.post('/auth/change-password', data);
+      const response = await apiClient.get('/auth/verify');
+      return response.data;
     } catch (error) {
-      console.error('Change password API error:', error.response?.data);
-      throw error;
+      throw new Error(error.response?.data?.message || 'Token verification failed');
     }
-  },
+  }
 };

@@ -1,21 +1,13 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import Login from '../../components/shared/Authentication/Login';
-import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import './LoginPage.css';
 
 const LoginPage = () => {
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // If already authenticated, redirect to dashboard
-    if (isAuthenticated) {
-      console.log('LoginPage: Already authenticated, redirecting to dashboard');
-      navigate('/owner/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
-  return <Login />;
+  return (
+    <div className="login-page">
+      <Login />
+    </div>
+  );
 };
 
 export default LoginPage;

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // ADD THIS IMPORT
 import { useAuth } from '../../../context/AuthContext';
-import { apiClient } from '../../../services/utils/apiClient';
+
+import apiClient from "../../../services/utils/apiClient";
 import { 
   BarChart3, 
   Users, 
@@ -119,25 +120,7 @@ const OwnerDashboard = () => {
     { icon: Globe, label: 'Website', path: '/owner/website', color: 'lime', description: 'Manage your website' }
   ];
 
-  if (loading) {
-    return (
-      <div className="owner-dashboard" style={{
-        '--primary-color': brandingData?.branding?.primaryColor || '#ffa600ff',
-        '--secondary-color': brandingData?.branding?.secondaryColor || '#ec0606ff'
-      }}>
-        <div className="loading-container">
-          <div className="pharmacy-loading">
-            <div className="loading-pills">
-              <div className="pill pill-1"></div>
-              <div className="pill pill-2"></div>
-              <div className="pill pill-3"></div>
-            </div>
-            <p>Loading ...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
 
   if (error) {
     return (
