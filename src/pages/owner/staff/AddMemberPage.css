@@ -1,0 +1,78 @@
+.add-member-page {
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.add-member-page h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.add-member-form label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.add-member-form input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
+.add-member-form button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background: #ff7800;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.add-member-form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error {
+  color: red;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.temp-password-box {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px dashed #ff7800;
+  border-radius: 6px;
+  background: #fff7f0;
+}
+
+.password-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.temp-password {
+  font-weight: bold;
+  font-family: monospace;
+  color: #333;
+}
+
+.temp-password-box button {
+  padding: 6px 10px;
+  cursor: pointer;
+  background: #ff7800;
+  border: none;
+  color: #fff;
+  font-weight: bold;
+  border-radius: 4px;
+}

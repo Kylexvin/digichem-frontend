@@ -1,56 +1,89 @@
-import React, { useState } from 'react';
-import { BarChart3, CheckCircle, Clock, FileText } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import apiClient from '../../../services/utils/apiClient';
+import Swal from 'sweetalert2';
 import './StockReconciliationPage.css';
 
 const StockReconciliationPage = () => {
-  const [reconciliations] = useState([
-    { id: 1, date: '2024-01-15', items: 45, status: 'completed', variance: 2 },
-    { id: 2, date: '2024-01-08', items: 38, status: 'completed', variance: 5 },
-    { id: 3, date: '2024-01-01', items: 42, status: 'pending', variance: null }
-  ]);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch pending reconciliations
+const fetchRecords = async () => {
+  try {
+    setLoading(true);
+    const response = await apiClient.get('/inventory/reconciliations/pending');
+    setRecords(response.data?.data || []); 
+  } catch (error) {
+    console.error('Error fetching reconciliations:', error);
+    Swal.fire('Error', 'Failed to fetch reconciliation records', 'error');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  // Solve reconciliation
+  const solveRecord = async (id) => {
+    try {
+      const confirm = await Swal.fire({
+        title: 'Mark as solved?',
+        text: 'This will mark the reconciliation as resolved.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, solve it',
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      await apiClient.put(`/inventory/reconciliations/${id}`, { status: 'resolved' });
+
+      Swal.fire('Solved', 'Reconciliation has been marked as resolved', 'success');
+      fetchRecords(); // refresh list
+    } catch (error) {
+      console.error('Error solving reconciliation:', error);
+      Swal.fire('Error', 'Failed to resolve reconciliation', 'error');
+    }
+  };
+
+  useEffect(() => {
+    fetchRecords();
+  }, []);
+
+  if (loading) {
+    return <div className="stock-reconciliation-page">Loading...</div>;
+  }
 
   return (
-    <div className="reconciliation-page">
-      <div className="page-header">
-        <h1>Stock Reconciliation</h1>
-        <button className="btn btn-primary">
-          <BarChart3 size={16} />
-          New Reconciliation
-        </button>
-      </div>
-
-      <div className="reconciliation-list">
-        <h2>Recent Reconciliations</h2>
-        
-        <div className="reconciliation-table">
-          <div className="table-header">
-            <span>Date</span>
-            <span>Items Count</span>
-            <span>Status</span>
-            <span>Variance</span>
-            <span>Actions</span>
-          </div>
-
-          {reconciliations.map(recon => (
-            <div key={recon.id} className="table-row">
-              <span>{recon.date}</span>
-              <span>{recon.items} items</span>
-              <span className={`status ${recon.status}`}>
-                {recon.status === 'completed' ? <CheckCircle size={16} /> : <Clock size={16} />}
-                {recon.status}
-              </span>
-              <span className={recon.variance > 0 ? 'variance positive' : 'variance'}>
-                {recon.variance !== null ? `${recon.variance} items` : '-'}
-              </span>
-              <span className="actions">
-                <button className="btn-icon">
-                  <FileText size={16} />
-                </button>
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="stock-reconciliation-page">
+      <h2>Stock Reconciliation</h2>
+      {records.length === 0 ? (
+        <p>No pending reconciliations 🎉</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity Sold</th>
+              <th>Available</th>
+              <th>Deficit</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((rec) => (
+              <tr key={rec._id}>
+                <td>{rec.productName}</td>
+                <td>{rec.quantitySold}</td>
+                <td>{rec.availableStock}</td>
+                <td>{rec.deficit}</td>
+                <td>
+                  <button onClick={() => solveRecord(rec._id)}>Solve</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 };

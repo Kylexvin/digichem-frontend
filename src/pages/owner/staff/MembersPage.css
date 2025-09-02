@@ -1,0 +1,55 @@
+.members-page {
+  padding: 20px;
+}
+
+.members-page h1 {
+  margin-bottom: 20px;
+}
+
+.members-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.members-table th,
+.members-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+}
+
+.members-table th {
+  background-color: #f4f4f4;
+}
+
+.members-table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.members-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.btn-success,
+.btn-warning,
+.btn-danger {
+  padding: 5px 10px;
+  margin-right: 5px;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.btn-success {
+  background-color: #28a745;
+}
+
+.btn-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+}
