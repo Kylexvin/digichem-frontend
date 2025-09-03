@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import './Login.css';
+import logo from '../../../assets/images/logos/logo3.png';
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
@@ -13,21 +14,20 @@ const Login = () => {
   const navigate = useNavigate();
 
   // Improved navigation effect
-useEffect(() => {
-  if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  switch (user.role) {
-    case 'pharmacy_owner':
-      navigate('/owner/dashboard', { replace: true });
-      break;
-    case 'attendant':
-      navigate('/attendant/pos', { replace: true });
-      break;
-    default:
-      Swal.fire('Error', 'Unknown role', 'error');
-  }
-}, [user, navigate]);
-
+    switch (user.role) {
+      case 'pharmacy_owner':
+        navigate('/owner/dashboard', { replace: true });
+        break;
+      case 'attendant':
+        navigate('/attendant/pos', { replace: true });
+        break;
+      default:
+        Swal.fire('Error', 'Unknown role', 'error');
+    }
+  }, [user, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -64,71 +64,83 @@ useEffect(() => {
 
   return (
     <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="logo-container">
-            <div className="logo">Kx</div>
+      <div className="glass-container">
+        {/* Left Side - Welcome Section */}
+        <div className="welcome-section">
+          <div className="welcome-content">
+            <h1 className="welcome-title">Hello</h1>
+            <h2 className="welcome-subtitle">Welcome Back</h2>
+            
+            <div className="logo-section">
+              <img src={logo} alt="KxByte Logo" className="kxbyte-logo" />
+              <h3 className="pos-name">DigiChem POS</h3>
+              <p className="pos-subtitle">by KxByte</p>
+            </div>
           </div>
-          <h1>RetailPro</h1>
-          <p className="brand-subtitle">by KxByte</p>
-          <p className="login-subtitle">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={credentials.email}
-              onChange={handleInputChange}
-              placeholder="Enter your email"
-              required
-              disabled={isSubmitting}
-            />
+        {/* Right Side - Login Form */}
+        <div className="form-section">
+          <div className="login-header">
+            <h2>Sign in to your account</h2>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="password-input-container">
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
               <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                value={credentials.password}
+                type="email"
+                id="email"
+                name="email"
+                value={credentials.email}
                 onChange={handleInputChange}
-                placeholder="Enter your password"
+                placeholder="Enter your email"
                 required
                 disabled={isSubmitting}
               />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isSubmitting}
-              >
-                {showPassword ? '🙈' : '👁️'}
-              </button>
             </div>
-          </div>
 
-          <div className="form-options">
-            <label className="remember-me">
-              <input type="checkbox" />
-              Remember me
-            </label>
-            <a href="#" className="forgot-password">Forgot password?</a>
-          </div>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <div className="password-input-container">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password"
+                  value={credentials.password}
+                  onChange={handleInputChange}
+                  placeholder="Enter your password"
+                  required
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isSubmitting}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            className="login-button"
-            disabled={isSubmitting || !credentials.email || !credentials.password}
-          >
-            {isSubmitting ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
+            <div className="form-options">
+              <label className="remember-me">
+                <input type="checkbox" />
+                Remember me
+              </label>
+              <a href="#" className="forgot-password">Forgot password?</a>
+            </div>
+
+            <button
+              type="submit"
+              className="login-button"
+              disabled={isSubmitting || !credentials.email || !credentials.password}
+            >
+              {isSubmitting ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
