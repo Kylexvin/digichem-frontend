@@ -10,6 +10,9 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [brandingData, setBrandingData] = useState(null);
 
+  // Add refresh state to prevent multiple simultaneous refresh attempts
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const isAuthenticated = !!user;
 
   const clearError = () => setError(null);
@@ -44,10 +47,27 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("user");
       setUser(null);
       setError(null);
+      setIsRefreshing(false); // Reset refresh state
     }
   };
 
   const refresh = async () => {
+    // Prevent multiple simultaneous refresh attempts
+    if (isRefreshing) {
+      console.log('Refresh already in progress, waiting...');
+      return new Promise((resolve) => {
+        const checkRefresh = setInterval(() => {
+          if (!isRefreshing) {
+            clearInterval(checkRefresh);
+            const tokens = JSON.parse(localStorage.getItem("tokens"));
+            resolve(!!tokens?.accessToken);
+          }
+        }, 100);
+      });
+    }
+
+    setIsRefreshing(true);
+    
     try {
       const tokens = JSON.parse(localStorage.getItem("tokens"));
       if (!tokens?.refreshToken) {
@@ -70,9 +90,14 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Refresh response invalid');
     } catch (error) {
       console.error('Refresh token error:', error);
-      // Don't immediately logout on refresh failure
-      // Let the user continue and handle it on next API call
+      // Only logout if refresh token is invalid (401/403)
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('Refresh token invalid, logging out');
+        logout();
+      }
       return false;
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -88,12 +113,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Helper function to check if token expires soon (within 5 minutes)
+  // Helper function to check if token expires soon (reduced buffer)
   const isTokenExpiringSoon = (token) => {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const currentTime = Math.floor(Date.now() / 1000);
-      return payload.exp <= (currentTime + 300); // 5 minutes
+      return payload.exp <= (currentTime + 60); // Reduced to 1 minute
     } catch (error) {
       return true;
     }
@@ -166,11 +191,14 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // Auto-refresh token when needed
+  // Auto-refresh token when needed - increased interval and better logic
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const interval = setInterval(async () => {
+      // Skip if already refreshing
+      if (isRefreshing) return;
+
       try {
         const tokens = JSON.parse(localStorage.getItem("tokens"));
         
@@ -187,10 +215,10 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('Error in auto-refresh check:', error);
       }
-    }, 2 * 60 * 1000); // Check every 2 minutes instead of 5
+    }, 5 * 60 * 1000); // Check every 5 minutes
 
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isRefreshing]);
 
   return (
     <AuthContext.Provider 
@@ -199,11 +227,12 @@ export const AuthProvider = ({ children }) => {
         login, 
         logout, 
         refresh, 
+        // fetchBrandingData,
         isAuthenticated, 
         isLoading: loading, 
         error, 
         clearError,
-        brandingData
+        isRefreshing // Expose refresh state
       }}
     >
       {children}

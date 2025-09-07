@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import {
   TrendingUp,
   Clock,
@@ -11,38 +11,161 @@ import {
   Minus,
   Trash2,
   Search,
-  X
+  X,
+  Printer
 } from "lucide-react";
+import { useReactToPrint } from 'react-to-print';
+import apiClient from '../../../services/utils/apiClient';
 
-// Mock product data
-const mockProducts = [
-  { id: 1, name: "Sugar 1kg", price: 120, stock: 42, category: "Groceries" },
-  { id: 2, name: "Bread", price: 50, stock: 30, category: "Bakery" },
-  { id: 3, name: "Milk 500ml", price: 60, stock: 25, category: "Dairy" },
-  { id: 4, name: "Cooking Oil 1L", price: 220, stock: 18, category: "Groceries" },
-  { id: 5, name: "Rice 2kg", price: 280, stock: 15, category: "Groceries" },
-  { id: 6, name: "Tea Leaves 250g", price: 150, stock: 22, category: "Beverages" },
-  { id: 7, name: "Soap Bar", price: 80, stock: 40, category: "Toiletries" },
-  { id: 8, name: "Toothpaste", price: 110, stock: 28, category: "Toiletries" },
-  { id: 9, name: "Mineral Water 500ml", price: 40, stock: 50, category: "Beverages" },
-  { id: 10, name: "Notebook", price: 75, stock: 35, category: "Stationery" },
-];
+// Receipt Component
+const ReceiptComponent = forwardRef(({ sale }, ref) => {
+  if (!sale) return null;
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('en-KE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  return (
+    <>
+      <style jsx>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .receipt-container, .receipt-container * {
+            visibility: visible;
+          }
+          .receipt-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 80mm;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+          }
+          .receipt-header {
+            text-align: center;
+            margin-bottom: 10px;
+          }
+          .receipt-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 0;
+          }
+          .receipt-info {
+            margin: 5px 0;
+            font-size: 11px;
+          }
+          .receipt-divider {
+            border-top: 1px dashed #000;
+            margin: 8px 0;
+          }
+          .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            font-size: 11px;
+          }
+          .receipt-total {
+            font-weight: bold;
+            font-size: 12px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+          }
+          .receipt-footer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 10px;
+          }
+        }
+      `}</style>
+      
+      <div ref={ref} className="receipt-container" style={{ display: 'none' }}>
+        <div className="receipt-header">
+          <h2 className="receipt-title">PHARMACY RECEIPT</h2>
+          <div className="receipt-info">Receipt: {sale.receiptNumber}</div>
+          <div className="receipt-info">Date: {formatDate(sale.createdAt)}</div>
+        </div>
+        
+        <div className="receipt-divider"></div>
+        
+        <div className="receipt-items">
+          {sale.items.map((item, index) => (
+            <div key={index}>
+              <div className="receipt-item">
+                <span>{item.productName}</span>
+              </div>
+              <div className="receipt-item">
+                <span>{item.quantity} {item.unitType} × KES {item.unitPrice}</span>
+                <span>KES {item.total.toFixed(2)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="receipt-divider"></div>
+        
+        <div className="receipt-item">
+          <span>Subtotal:</span>
+          <span>KES {sale.subtotal.toFixed(2)}</span>
+        </div>
+        
+        <div className="receipt-item receipt-total">
+          <span>TOTAL:</span>
+          <span>KES {sale.totalAmount.toFixed(2)}</span>
+        </div>
+        
+        <div className="receipt-item">
+          <span>Paid ({sale.paymentMethod.toUpperCase()}):</span>
+          <span>KES {sale.amountPaid.toFixed(2)}</span>
+        </div>
+        
+        {sale.changeDue > 0 && (
+          <div className="receipt-item">
+            <span>Change:</span>
+            <span>KES {sale.changeDue.toFixed(2)}</span>
+          </div>
+        )}
+        
+        <div className="receipt-footer">
+          <div>Thank you for your business!</div>
+          <div>Come again soon</div>
+        </div>
+      </div>
+    </>
+  );
+});
 
 // Product Search Component
-const ProductSearch = ({ onAddToCart }) => {
+const ProductSearch = ({ onAddToCart, products, loading }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      setFilteredProducts(mockProducts);
+      setFilteredProducts(products);
     } else {
-      const filtered = mockProducts.filter(product =>
+      const filtered = products.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredProducts(filtered);
     }
-  }, [searchTerm]);
+  }, [searchTerm, products]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+        Loading products...
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -72,7 +195,7 @@ const ProductSearch = ({ onAddToCart }) => {
       
       <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
         {filteredProducts.map(product => (
-          <div key={product.id} style={{
+          <div key={product._id} style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -82,22 +205,23 @@ const ProductSearch = ({ onAddToCart }) => {
             <div>
               <div style={{ fontWeight: '500' }}>{product.name}</div>
               <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                KES {product.price} • {product.category} • Stock: {product.stock}
+                KES {product.pricing.pricePerUnit} • {product.category} • Stock: {product.stock.totalUnits}
               </div>
             </div>
             <button
               onClick={() => onAddToCart(product)}
+              disabled={product.stock.totalUnits === 0}
               style={{
                 padding: '6px 12px',
-                backgroundColor: '#3b82f6',
+                backgroundColor: product.stock.totalUnits === 0 ? '#9ca3af' : '#3b82f6',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: 'pointer',
+                cursor: product.stock.totalUnits === 0 ? 'not-allowed' : 'pointer',
                 fontSize: '12px'
               }}
             >
-              Add to Cart
+              {product.stock.totalUnits === 0 ? 'Out of Stock' : 'Add to Cart'}
             </button>
           </div>
         ))}
@@ -125,7 +249,7 @@ const CartSummary = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
   return (
     <div>
       {cartItems.map(item => (
-        <div key={item.id} style={{
+        <div key={item._id} style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -141,7 +265,7 @@ const CartSummary = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
-              onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+              onClick={() => onUpdateQuantity(item._id, item.quantity - 1)}
               style={{
                 padding: '4px',
                 backgroundColor: '#f3f4f6',
@@ -158,20 +282,22 @@ const CartSummary = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
             </span>
             
             <button
-              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+              onClick={() => onUpdateQuantity(item._id, item.quantity + 1)}
+              disabled={item.quantity >= item.availableStock}
               style={{
                 padding: '4px',
-                backgroundColor: '#f3f4f6',
+                backgroundColor: item.quantity >= item.availableStock ? '#f9fafb' : '#f3f4f6',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer'
+                cursor: item.quantity >= item.availableStock ? 'not-allowed' : 'pointer',
+                opacity: item.quantity >= item.availableStock ? 0.5 : 1
               }}
             >
               <Plus size={14} />
             </button>
             
             <button
-              onClick={() => onRemoveItem(item.id)}
+              onClick={() => onRemoveItem(item._id)}
               style={{
                 padding: '4px',
                 backgroundColor: '#fef2f2',
@@ -191,12 +317,25 @@ const CartSummary = ({ cartItems, onUpdateQuantity, onRemoveItem }) => {
   );
 };
 
-// Checkout Component
-const Checkout = ({ cartItems, selectedPayment, onPaymentChange }) => {
+// Checkout Component with Auto Print
+const Checkout = ({ cartItems, selectedPayment, onPaymentChange, onCompleteSale, loading, autoPrint, onAutoPrintChange, onPrintReceipt, lastSale }) => {
+  const [mpesaNumber, setMpesaNumber] = useState("");
+  
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const vat = subtotal * 0.16;
-  const discount = cartItems.length > 0 ? 50 : 0;
-  const total = subtotal + vat - discount;
+  const total = subtotal;
+
+  const handleCompleteSale = () => {
+    const paymentData = {
+      paymentMethod: selectedPayment,
+      amountPaid: total
+    };
+    
+    if (selectedPayment === 'mpesa' && mpesaNumber) {
+      paymentData.mpesaNumber = mpesaNumber;
+    }
+    
+    onCompleteSale(paymentData);
+  };
 
   return (
     <div className="checkout-section">
@@ -210,13 +349,7 @@ const Checkout = ({ cartItems, selectedPayment, onPaymentChange }) => {
             <div style={{ fontSize: '20px', marginBottom: '5px' }}>💵</div>
             Cash
           </button>
-          <button 
-            className={`payment-btn ${selectedPayment === 'card' ? 'active' : ''}`}
-            onClick={() => onPaymentChange('card')}
-          >
-            <CreditCard size={20} style={{ marginBottom: '5px' }} />
-            Card
-          </button>
+         
           <button 
             className={`payment-btn ${selectedPayment === 'mpesa' ? 'active' : ''}`}
             onClick={() => onPaymentChange('mpesa')}
@@ -224,13 +357,7 @@ const Checkout = ({ cartItems, selectedPayment, onPaymentChange }) => {
             <div style={{ fontSize: '20px', marginBottom: '5px' }}>📱</div>
             M-Pesa
           </button>
-          <button 
-            className={`payment-btn ${selectedPayment === 'credit' ? 'active' : ''}`}
-            onClick={() => onPaymentChange('credit')}
-          >
-            <div style={{ fontSize: '20px', marginBottom: '5px' }}>📋</div>
-            Credit
-          </button>
+         
         </div>
         
         {selectedPayment === 'mpesa' && (
@@ -238,6 +365,8 @@ const Checkout = ({ cartItems, selectedPayment, onPaymentChange }) => {
             <input 
               type="tel" 
               placeholder="Enter M-Pesa number (07XX XXX XXX)"
+              value={mpesaNumber}
+              onChange={(e) => setMpesaNumber(e.target.value)}
               style={{
                 width: '100%',
                 padding: '10px',
@@ -249,34 +378,98 @@ const Checkout = ({ cartItems, selectedPayment, onPaymentChange }) => {
           </div>
         )}
         
-        {selectedPayment === 'card' && (
-          <div style={{ marginTop: '15px', fontSize: '14px', color: '#6b7280' }}>
-            Insert card or tap when ready
-          </div>
-        )}
+        
+        
+
+        
       </div>
 
       <div className="checkout-summary">
         <h3 className="summary-title">Order Summary</h3>
-        <div className="summary-line">
-          <span>Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-          <span>KES {subtotal.toFixed(2)}</span>
+        
+        {/* Auto Print Toggle */}
+        <div style={{ 
+          marginBottom: '15px',
+          padding: '10px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between'
+          }}>
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>
+              Auto Print Receipt
+            </span>
+            <button
+              onClick={() => onAutoPrintChange(!autoPrint)}
+              style={{
+                width: '48px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: autoPrint ? '#10b981' : '#d1d5db',
+                position: 'relative',
+                transition: 'background-color 0.2s'
+              }}
+            >
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: 'white',
+                  position: 'absolute',
+                  top: '2px',
+                  left: autoPrint ? '26px' : '2px',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              />
+            </button>
+          </div>
         </div>
-        <div className="summary-line">
-          <span>VAT (16%)</span>
-          <span>KES {vat.toFixed(2)}</span>
-        </div>
-        <div className="summary-line">
-          <span>Discount</span>
-          <span>-KES {discount.toFixed(2)}</span>
-        </div>
+        
         <div className="summary-line total">
-          <span>Total</span>
+          <span>Total ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
           <span>KES {total.toFixed(2)}</span>
         </div>
-        <button className="checkout-btn" disabled={cartItems.length === 0}>
-          Complete Sale - KES {total.toFixed(2)}
+        
+        <button 
+          className="checkout-btn" 
+          disabled={cartItems.length === 0 || loading || (selectedPayment === 'mpesa' && !mpesaNumber)}
+          onClick={handleCompleteSale}
+        >
+          {loading ? 'Processing...' : `Complete Sale - KES ${total.toFixed(2)}`}
         </button>
+        
+        {/* Manual Print Receipt Button */}
+        {autoPrint && lastSale && (
+          <button 
+            onClick={onPrintReceipt}
+            style={{
+              width: '100%',
+              marginTop: '10px',
+              padding: '10px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <Printer size={16} />
+            Print Receipt
+          </button>
+        )}
       </div>
     </div>
   );
@@ -286,20 +479,91 @@ const Checkout = ({ cartItems, selectedPayment, onPaymentChange }) => {
 const POSHomePage = () => {
   const [selectedPayment, setSelectedPayment] = useState("cash");
   const [cartItems, setCartItems] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [todaysSales, setTodaysSales] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saleLoading, setSaleLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Receipt printing states
+  const [autoPrint, setAutoPrint] = useState(false);
+  const [lastSale, setLastSale] = useState(null);
+  const receiptRef = useRef();
+  
+  const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
+    onAfterPrint: () => {
+      // Clear sale state after printing
+      setLastSale(null);
+    }
+  });
+
+  // Function to fetch products from API
+  const fetchProducts = async () => {
+    try {
+      const response = await apiClient.get('/inventory/products');
+      if (response.data.success) {
+        setProducts(response.data.data);
+      } else {
+        throw new Error('Failed to fetch products');
+      }
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      setError('Failed to load products. Please check your connection.');
+    }
+  };
+
+  // Function to fetch today's sales
+  const fetchTodaysSales = async () => {
+    try {
+      const response = await apiClient.get('/pos/sales?date=today');
+      if (response.data.success) {
+        setTodaysSales(response.data.data);
+      } else {
+        throw new Error('Failed to fetch sales');
+      }
+    } catch (error) {
+      console.error('Failed to fetch sales:', error);
+      setError('Failed to load sales data. Please check your connection.');
+    }
+  };
+
+  // Load initial data
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      await Promise.all([fetchProducts(), fetchTodaysSales()]);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
 
   // Function to add product to cart
   const handleAddToCart = (product) => {
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
+      const existingItem = prevItems.find(item => item._id === product._id);
       
       if (existingItem) {
+        if (existingItem.quantity >= product.stock.totalUnits) {
+          alert('Cannot add more items. Stock limit reached.');
+          return prevItems;
+        }
+        
         return prevItems.map(item =>
-          item.id === product.id
+          item._id === product._id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        return [...prevItems, { 
+          _id: product._id,
+          name: product.name,
+          price: product.pricing.pricePerUnit,
+          quantity: 1,
+          availableStock: product.stock.totalUnits,
+          unitType: product.unitType
+        }];
       }
     });
   };
@@ -312,25 +576,90 @@ const POSHomePage = () => {
     }
     
     setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
+      prevItems.map(item => {
+        if (item._id === productId) {
+          if (newQuantity > item.availableStock) {
+            alert('Cannot exceed available stock.');
+            return item;
+          }
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      })
     );
   };
 
   // Function to remove item from cart
   const handleRemoveItem = (productId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+    setCartItems(prevItems => prevItems.filter(item => item._id !== productId));
+  };
+
+  // Function to complete sale with receipt printing
+  const handleCompleteSale = async (paymentData) => {
+    if (cartItems.length === 0) return;
+
+    setSaleLoading(true);
+    
+    try {
+      const saleData = {
+        items: cartItems.map(item => ({
+          productId: item._id,
+          quantity: item.quantity
+        })),
+        paymentMethod: paymentData.paymentMethod,
+        amountPaid: paymentData.amountPaid
+      };
+
+      if (paymentData.mpesaNumber) {
+        saleData.mpesaNumber = paymentData.mpesaNumber;
+      }
+
+      const response = await apiClient.post('/pos/sales', saleData);
+      
+      if (response.data.success) {
+        // Clear cart and refresh data
+        setCartItems([]);
+        await fetchTodaysSales();
+        await fetchProducts();
+        
+        // Handle receipt printing based on autoPrint setting
+        if (autoPrint) {
+          setLastSale(response.data.data.sale);
+          // Trigger print after a short delay to ensure component is mounted
+          setTimeout(() => {
+            handlePrint();
+          }, 100);
+        } else {
+          // Just show success alert if not auto-printing
+          alert(`Sale completed successfully! Receipt: ${response.data.data.sale.receiptNumber}`);
+        }
+      } else {
+        throw new Error(response.data.message || 'Sale failed');
+      }
+    } catch (error) {
+      console.error('Sale failed:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Sale failed due to network error';
+      alert(`Sale failed: ${errorMessage}`);
+    } finally {
+      setSaleLoading(false);
+    }
+  };
+
+  // Function to manually print receipt
+  const handlePrintReceipt = () => {
+    if (lastSale) {
+      handlePrint();
+    }
   };
 
   // Rich Analytics Component
   const AnalyticsSection = () => {
-    const totalSales = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const transactionCount = cartItems.length > 0 ? 1 : 0; // Simplified for demo
-    const avgSale = cartItems.length > 0 ? totalSales / cartItems.reduce((sum, item) => sum + item.quantity, 0) : 0;
-    const itemsSold = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalSales = todaysSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+    const transactionCount = todaysSales.length;
+    const avgSale = transactionCount > 0 ? totalSales / transactionCount : 0;
+    const itemsSold = todaysSales.reduce((sum, sale) => 
+      sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
+    );
 
     return (
       <div className="analytics-section">
@@ -365,13 +694,17 @@ const POSHomePage = () => {
     <div className="search-section">
       <div className="search-header">
         <h3 className="search-title">Product Search</h3>
-        <div style={{ fontSize: '12px', color: '#6b7280' }}>
-          <Clock size={14} style={{ display: 'inline', marginRight: '4px' }} />
+        <div style={{ fontSize: '12px', color: '#ff6b35' }}>
+          
           Quick search & add to cart
         </div>
       </div>
       <div className="search-content">
-        <ProductSearch onAddToCart={handleAddToCart} />
+        <ProductSearch 
+          onAddToCart={handleAddToCart} 
+          products={products} 
+          loading={loading}
+        />
       </div>
     </div>
   );
@@ -389,9 +722,12 @@ const POSHomePage = () => {
           <Calculator size={20} style={{ marginBottom: '8px' }} />
           <div>Manual Entry</div>
         </button>
-        <button className="quick-action-btn">
+        <button 
+          className="quick-action-btn"
+          onClick={() => window.location.reload()}
+        >
           <Receipt size={20} style={{ marginBottom: '8px' }} />
-          <div>Last Receipt</div>
+          <div>Refresh Data</div>
         </button>
         <button className="quick-action-btn">
           <Package size={20} style={{ marginBottom: '8px' }} />
@@ -426,17 +762,76 @@ const POSHomePage = () => {
       cartItems={cartItems}
       selectedPayment={selectedPayment}
       onPaymentChange={setSelectedPayment}
+      onCompleteSale={handleCompleteSale}
+      loading={saleLoading}
+      autoPrint={autoPrint}
+      onAutoPrintChange={setAutoPrint}
+      onPrintReceipt={handlePrintReceipt}
+      lastSale={lastSale}
     />
   );
 
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        <div>Loading POS data...</div>
+        {error && <div style={{ color: '#ef4444', fontSize: '14px' }}>{error}</div>}
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && products.length === 0) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        <div style={{ color: '#ef4444' }}>Error: {error}</div>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer'
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="pos-content-grid">
-      <AnalyticsSection />
-      <SearchSection />
-      <QuickActionsSection />
-      <CartSection />
-      <CheckoutSection />
-    </div>
+    <>
+      <div className="pos-content-grid">
+        <AnalyticsSection />
+        <SearchSection />
+        <QuickActionsSection />
+        <CartSection />
+        <CheckoutSection />
+      </div>
+      
+      {/* Hidden Receipt Component for Printing */}
+      {lastSale && (
+        <ReceiptComponent ref={receiptRef} sale={lastSale} />
+      )}
+    </>
   );
 };
 

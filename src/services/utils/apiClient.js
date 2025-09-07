@@ -12,6 +12,22 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+// Global state to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
 // Utility function to check if token is expired or about to expire
 const isTokenExpired = (token) => {
   if (!token) return true;
@@ -20,8 +36,8 @@ const isTokenExpired = (token) => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const currentTime = Math.floor(Date.now() / 1000);
     
-    // Check if token expires in next 2 minutes (120 seconds buffer)
-    return payload.exp <= (currentTime + 120);
+    // Reduced buffer to 30 seconds to prevent premature refreshes
+    return payload.exp <= (currentTime + 30);
   } catch (error) {
     console.error('Error parsing token:', error);
     return true;
@@ -33,9 +49,10 @@ const refreshTokenDirect = async (refreshToken) => {
   try {
     const response = await axios.post(`${BASE_URL}/auth/refresh`, {}, {
       headers: {
-        'Authorization': `Bearer ${refreshToken}`, // Send in header, not body!
+        'Authorization': `Bearer ${refreshToken}`,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 10000 // Add timeout to prevent hanging requests
     });
     return response.data;
   } catch (error) {
@@ -54,7 +71,22 @@ apiClient.interceptors.request.use(
         if (isTokenExpired(tokens.accessToken)) {
           console.log('Access token expired, refreshing...');
           
+          if (isRefreshing) {
+            // If refresh is already in progress, queue this request
+            console.log('Refresh already in progress, queueing request...');
+            return new Promise((resolve, reject) => {
+              failedQueue.push({ resolve, reject });
+            }).then(token => {
+              config.headers.Authorization = `Bearer ${token}`;
+              return config;
+            }).catch(err => {
+              return Promise.reject(err);
+            });
+          }
+
           if (tokens.refreshToken) {
+            isRefreshing = true;
+            
             try {
               const refreshData = await refreshTokenDirect(tokens.refreshToken);
               
@@ -62,15 +94,21 @@ apiClient.interceptors.request.use(
                 // Update stored tokens
                 localStorage.setItem('tokens', JSON.stringify(refreshData.tokens));
                 config.headers.Authorization = `Bearer ${refreshData.tokens.accessToken}`;
+                processQueue(null, refreshData.tokens.accessToken);
                 console.log('Token refreshed successfully');
               } else {
                 throw new Error('Refresh response invalid');
               }
             } catch (refreshError) {
               console.error('Token refresh failed:', refreshError);
+              processQueue(refreshError, null);
               localStorage.removeItem('tokens');
-              window.location.href = '/login';
+              localStorage.removeItem('user');
+              
+              // Don't redirect immediately, let the app handle it
               return Promise.reject(refreshError);
+            } finally {
+              isRefreshing = false;
             }
           } else {
             throw new Error('No refresh token available');
@@ -82,8 +120,7 @@ apiClient.interceptors.request.use(
       }
     } catch (err) {
       console.warn('Error handling tokens:', err);
-      localStorage.removeItem('tokens');
-      window.location.href = '/login';
+      // Don't clear tokens here, let the response interceptor handle it
     }
     
     return config;
@@ -101,6 +138,19 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
+      if (isRefreshing) {
+        // If refresh is already in progress, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ 
+            resolve: (token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(apiClient(originalRequest));
+            },
+            reject: (err) => reject(err)
+          });
+        });
+      }
+
       try {
         const tokens = JSON.parse(localStorage.getItem('tokens'));
         
@@ -108,12 +158,16 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
+        isRefreshing = true;
         console.log('401 error, attempting token refresh...');
         const refreshData = await refreshTokenDirect(tokens.refreshToken);
 
         if (refreshData.success && refreshData.tokens) {
           // Update stored tokens
           localStorage.setItem('tokens', JSON.stringify(refreshData.tokens));
+          
+          // Process queued requests
+          processQueue(null, refreshData.tokens.accessToken);
           
           // Retry original request with new token
           originalRequest.headers.Authorization = `Bearer ${refreshData.tokens.accessToken}`;
@@ -124,9 +178,20 @@ apiClient.interceptors.response.use(
         
       } catch (refreshError) {
         console.error('Token refresh failed on 401:', refreshError);
+        processQueue(refreshError, null);
         localStorage.removeItem('tokens');
-        window.location.href = '/login';
+        localStorage.removeItem('user');
+        
+        // Only redirect for auth-related errors
+        if (refreshError.response?.status === 401 || refreshError.response?.status === 403) {
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
+        }
+        
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
     

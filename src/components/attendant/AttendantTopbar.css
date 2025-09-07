@@ -13,6 +13,19 @@
   z-index: 99; /* slightly below sidebar if they overlap */
 }
 
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pharmacy-logo {
+  height: 40px;
+  width: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .shop-name {
   font-size: 1.25rem;
   font-weight: 600;
